@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gopheramit/greenlight-api/internal/data"
 	_ "github.com/lib/pq"
 )
 
@@ -29,6 +30,7 @@ type config struct {
 type application struct {
 	config config
 	logger log.Logger
+	models data.Models
 }
 
 func main() {
@@ -54,6 +56,7 @@ func main() {
 
 		config: cfg,
 		logger: *logger,
+		models: data.NewModels(db),
 	}
 
 	// mux := http.NewServeMux()
