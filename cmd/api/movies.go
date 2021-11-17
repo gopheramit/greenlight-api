@@ -175,27 +175,27 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 		Genres []string
 		data.Filters
 	}
-	// Initialize a new Validator instance.
+
 	v := validator.New()
-	// Call r.URL.Query() to get the url.Values map containing the query string data.
+
 	qs := r.URL.Query()
-	// Use our helpers to extract the title and genres query string values, falling back
-	// to defaults of an empty string and an empty slice respectively if they are not
-	// provided by the client.
 	input.Title = app.readString(qs, "title", "")
 	input.Genres = app.readCSV(qs, "genres", []string{})
-
 	input.Filters.Page = app.readInt(qs, "page", 1, v)
 	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
-	// Extract the sort query string value, falling back to "id" if it is not provided
-	// by the client (which will imply a ascending sort on movie ID).
 	input.Filters.Sort = app.readString(qs, "sort", "id")
-	// Check the Validator instance for any errors and use the failedValidationResponse()
-	// helper to send the client a response if necessary.
+
 	if !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	// Dump the contents of the input struct in a HTTP response.
-	fmt.Fprintf(w, "%+v\n", input)
+	movies, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	err = app.writeJSON(w, http.StatusOK, envelope{"movies": movies}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
