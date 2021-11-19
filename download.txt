@@ -1,1 +1,2 @@
 go get golang.org/x/time/rate@latest
+go get golang.org/x/crypto/bcrypt@latest
