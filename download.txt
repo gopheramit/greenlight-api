@@ -1,2 +1,3 @@
 go get golang.org/x/time/rate@latest
 go get golang.org/x/crypto/bcrypt@latest
+go get github.com/go-mail/mail/v2@v2.3.0
