@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
+	"expvar"
 	"flag"
+	"fmt"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -14,7 +17,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const version = "1.0.0"
+var (
+	buildTime string
+	version   string
+)
 
 type config struct {
 	port int
@@ -50,10 +56,20 @@ type application struct {
 func main() {
 
 	var cfg config
+	expvar.NewString("version").Set(version)
+	expvar.Publish("goroutines", expvar.Func(func() interface{} {
+		return runtime.NumGoroutine()
+	}))
+	// Publish the database connection pool statistics.
+
+	// Publish the current Unix timestamp.
+	expvar.Publish("timestamp", expvar.Func(func() interface{} {
+		return time.Now().Unix()
+	}))
 
 	flag.IntVar(&cfg.port, "Port", 8080, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
-	flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://greenlight:pa55word@localhost/greenlight", "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", "", "PostgreSQL DSN")
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
@@ -65,8 +81,13 @@ func main() {
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "0abf276416b183", "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "d8672aa2264bb5", "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.alexedwards.net>", "SMTP sender")
+	displayVersion := flag.Bool("version", false, "Display version and exit")
 	flag.Parse()
-
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		fmt.Printf("Build time:\t%s\n", buildTime)
+		os.Exit(0)
+	}
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 	db, err := openDB(cfg)
 	if err != nil {
@@ -74,6 +95,9 @@ func main() {
 	}
 	defer db.Close()
 	logger.PrintInfo("database connection pool established", nil)
+	expvar.Publish("database", expvar.Func(func() interface{} {
+		return db.Stats()
+	}))
 	app := &application{
 
 		config: cfg,
