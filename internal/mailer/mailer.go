@@ -5,6 +5,8 @@ import (
 	"embed"
 	"text/template"
 	"time"
+
+	"github.com/go-mail/mail/v2"
 )
 
 var templateFS embed.FS
