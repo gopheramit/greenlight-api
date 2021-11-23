@@ -41,7 +41,7 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 	}
 	var (
 		mu      sync.Mutex
-		clients = make(map[string]*rate.Limiter)
+		clients = make(map[string]*client)
 	)
 	go func() {
 		for {
